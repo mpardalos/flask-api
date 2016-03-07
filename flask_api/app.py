@@ -8,6 +8,8 @@ from flask_api.response import APIResponse
 from flask_api.settings import APISettings
 from itertools import chain
 from werkzeug.exceptions import HTTPException
+from werkzeug.routing import parse_rule
+import coreapi
 import re
 import sys
 
@@ -19,24 +21,87 @@ api_resources = Blueprint(
 )
 
 
-def urlize_quoted_links(content):
-    return re.sub(r'"(https?://[^"]*)"', r'"<a href="\1">\1</a>"', content)
+def dedent(content):
+    """
+    Remove leading indent from a block of text.
+    Used when generating descriptions from docstrings.
+
+    Note that python's `textwrap.dedent` doesn't quite cut it,
+    as it fails to dedent multiline docstrings that include
+    unindented text on the initial line.
+    """
+    #content = force_text(content)
+    whitespace_counts = [len(line) - len(line.lstrip(' '))
+                         for line in content.splitlines()[1:] if line.lstrip()]
+
+    # unindent the content if needed
+    if whitespace_counts:
+        whitespace_pattern = '^' + (' ' * min(whitespace_counts))
+        content = re.sub(re.compile(whitespace_pattern, re.MULTILINE), '', content)
+
+    return content.strip()
 
 
-class FlaskAPI(Flask):
+def get_link(rule, method, func):
+    """
+    """
+    url = ''
+    path_params = set()
+    for (converter, arguments, variable) in parse_rule(rule):
+        if converter is None:
+            url += variable
+        else:
+            url += '{' + variable + '}'
+            path_params.add(variable)
+
+    names = func.__code__.co_varnames[:func.__code__.co_argcount]
+
+    num_optional = len(func.__defaults__ or [])
+    num_required = len(names) - num_optional
+    required_list = [
+        True for idx in range(num_required)
+    ] + [
+        False for idx in range(num_optional)
+    ]
+
+    default_location = 'query' if method in ('GET', 'DELETE') else 'form'
+    locations = [
+        'path' if (name in path_params) else default_location
+        for name in names
+    ]
+
+    link_description = ''
+    field_descriptions = ['' for name in names]
+    for line in dedent(func.__doc__).splitlines():
+        if line.startswith('* '):
+            name, desc = line.split('-', 1)
+            field_descriptions.append(desc.strip())
+        else:
+            link_description += line + '\n'
+    link_description = link_description.strip()
+
+    fields = [
+        coreapi.Field(name=name, required=required, location=location, description=description)
+        for name, required, location, description
+        in zip(names, required_list, locations, field_descriptions)
+    ]
+    return coreapi.Link(url, action=method, fields=fields, description=link_description)
+
+
+class App(Flask):
     request_class = APIRequest
     response_class = APIResponse
 
     def __init__(self, *args, **kwargs):
-        super(FlaskAPI, self).__init__(*args, **kwargs)
+        super(App, self).__init__(*args, **kwargs)
         self.api_settings = APISettings(self.config)
         self.register_blueprint(api_resources)
-        self.jinja_env.filters['urlize_quoted_links'] = urlize_quoted_links
+        self.schema = {}
 
     def preprocess_request(self):
         request.parser_classes = self.api_settings.DEFAULT_PARSERS
         request.renderer_classes = self.api_settings.DEFAULT_RENDERERS
-        return super(FlaskAPI, self).preprocess_request()
+        return super(App, self).preprocess_request()
 
     def make_response(self, rv):
         """
@@ -54,7 +119,7 @@ class FlaskAPI(Flask):
             headers, status_or_headers = status_or_headers, None
 
         if not isinstance(rv, self.response_class):
-            if isinstance(rv, (text_type, bytes, bytearray, list, dict)):
+            if isinstance(rv, (text_type, bytes, bytearray, list, dict, coreapi.Document)):
                 rv = self.response_class(rv, headers=headers, status=status_or_headers)
                 headers = status_or_headers = None
             else:
@@ -97,22 +162,53 @@ class FlaskAPI(Flask):
     def handle_api_exception(self, exc):
         return APIResponse({'message': exc.detail}, status=exc.status_code)
 
-    def create_url_adapter(self, request):
-        """
-        We need to override the default behavior slightly here,
-        to ensure the any method-based routing takes account of
-        any method overloading, so that eg PUT requests from the
-        browsable API are routed to the correct view.
-        """
-        if request is not None:
-            environ = request.environ.copy()
-            environ['REQUEST_METHOD'] = request.method
-            return self.url_map.bind_to_environ(environ,
-                server_name=self.config['SERVER_NAME'])
-        # We need at the very least the server name to be set for this
-        # to work.
-        if self.config['SERVER_NAME'] is not None:
-            return self.url_map.bind(
-                self.config['SERVER_NAME'],
-                script_name=self.config['APPLICATION_ROOT'] or '/',
-                url_scheme=self.config['PREFERRED_URL_SCHEME'])
+    def get(self, url, **options):
+        return self.app_route(url, 'GET', **options)
+
+    def post(self, url, **options):
+        return self.app_route(url, 'POST', **options)
+
+    def put(self, url, **options):
+        return self.app_route(url, 'PUT', **options)
+
+    def patch(self, url, **options):
+        return self.app_route(url, 'PATCH', **options)
+
+    def delete(self, url, **options):
+        return self.app_route(url, 'DELETE', **options)
+
+    def app_route(self, rule, method, **options):
+        options['methods'] = [method]
+        tag = options.pop('tag', None)
+        def decorator(func):
+            endpoint = options.pop('endpoint', func.__name__)
+            link = get_link(rule, method, func)
+            if tag:
+                if tag not in self.schema:
+                    self.schema[tag] = {}
+                self.schema[tag][endpoint] = link
+            else:
+                self.schema[endpoint] = link
+
+            def wrapper(*args, **kwargs):
+                for field in link.fields:
+                    if field.location == 'form':
+                        if field.name in request.data:
+                            kwargs[field.name] = request.data[field.name]
+                    elif field.location == 'query':
+                        if field.name in request.args:
+                            kwargs[field.name] = request.args[field.name]
+                return func(*args, **kwargs)
+
+            self.add_url_rule(rule, endpoint, wrapper, **options)
+            return func
+        return decorator
+
+    def run(self, *args, **kwargs):
+        @self.route('/', methods=['GET'])
+        def schema():
+            from flask import request
+            from flask_api.renderers import CoreJSONRenderer
+            request.renderers = [CoreJSONRenderer()]
+            return coreapi.Document(content=self.schema)
+        super(App, self).run(*args, **kwargs)

@@ -3,7 +3,7 @@ from flask_api import status
 
 
 class APIException(Exception):
-    status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+    status_code = 500
     detail = ''
 
     def __init__(self, detail=None):
@@ -15,56 +15,45 @@ class APIException(Exception):
 
 
 class ParseError(APIException):
-    status_code = status.HTTP_400_BAD_REQUEST
+    status_code = 400
     detail = 'Malformed request.'
 
 
 class AuthenticationFailed(APIException):
-    status_code = status.HTTP_401_UNAUTHORIZED
+    status_code = 401
     detail = 'Incorrect authentication credentials.'
 
 
 class NotAuthenticated(APIException):
-    status_code = status.HTTP_401_UNAUTHORIZED
+    status_code = 401
     detail = 'Authentication credentials were not provided.'
 
 
 class PermissionDenied(APIException):
-    status_code = status.HTTP_403_FORBIDDEN
+    status_code = 403
     detail = 'You do not have permission to perform this action.'
 
 
 class NotFound(APIException):
-    status_code = status.HTTP_404_NOT_FOUND
+    status_code = 404
     detail = 'This resource does not exist.'
 
-# class MethodNotAllowed(APIException):
-#     status_code = status.HTTP_405_METHOD_NOT_ALLOWED
-#     detail = 'Request method "%s" not allowed.'
 
-#     def __init__(self, method, detail=None):
-#         self.detail = (detail or self.detail) % method
+class MethodNotAllowed(APIException):
+    status_code = 405
+    detail = 'Request method not allowed.'
 
 
 class NotAcceptable(APIException):
-    status_code = status.HTTP_406_NOT_ACCEPTABLE
+    status_code = 406
     detail = 'Could not satisfy the request Accept header.'
 
 
 class UnsupportedMediaType(APIException):
-    status_code = status.HTTP_415_UNSUPPORTED_MEDIA_TYPE
+    status_code = 415
     detail = 'Unsupported media type in the request Content-Type header.'
 
 
 class Throttled(APIException):
-    status_code = status.HTTP_429_TOO_MANY_REQUESTS
+    status_code = 429
     detail = 'Request was throttled.'
-
-#     def __init__(self, wait=None, detail=None):
-#         if wait is None:
-#             self.detail = detail or self.detail
-#             self.wait = None
-#         else:
-#             format = (detail or self.detail) + ' ' + self.extra_detail
-#             self.detail = format % (wait, wait != 1 and 's' or '')
-#             self.wait = math.ceil(wait)

@@ -1,7 +1,8 @@
 # coding: utf8
 from __future__ import unicode_literals
+from coreapi import Document
 from flask import request, Response
-from flask._compat import text_type, string_types
+from flask._compat import string_types
 
 
 class APIResponse(Response):
@@ -9,26 +10,16 @@ class APIResponse(Response):
         super(APIResponse, self).__init__(None, *args, **kwargs)
 
         media_type = None
-        if isinstance(content, (list, dict, text_type, string_types)):
-            renderer = request.accepted_renderer
-            if content != '' or renderer.handles_empty_responses:
-                media_type = request.accepted_media_type
-                options = self.get_renderer_options()
-                content = renderer.render(content, media_type, **options)
-                if self.status_code == 204:
-                    self.status_code = 200
+        if isinstance(content, (Document, list, dict, string_types)):
+            renderer = request.renderer
+            if content != '':
+                context = {'request': request, 'response': self}
+                content = renderer(content, **context)
 
-        if isinstance(content, (text_type, bytes, bytearray)):
+        if isinstance(content, (string_types, bytes, bytearray)):
             self.set_data(content)
         else:
             self.response = content
 
-        if media_type is not None:
-            self.headers['Content-Type'] = str(media_type)
-
-    def get_renderer_options(self):
-        return {
-            'status': self.status,
-            'status_code': self.status_code,
-            'headers': self.headers
-        }
+        if renderer and renderer.media_type:
+            self.headers['Content-Type'] = str(renderer.media_type)

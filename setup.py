@@ -10,16 +10,17 @@ import sys
 
 name = 'Flask-API'
 package = 'flask_api'
-description = 'Browsable web APIs for Flask.'
+description = 'Web APIs for Flask.'
 url = 'http://www.flaskapi.org'
 author = 'Tom Christie'
 author_email = 'tom@tomchristie.com'
 license = 'BSD'
 install_requires = [
-    'Flask==0.10.1',
+    'flask',
+    'coreapi'
 ]
 
-long_description = """Browsable web APIs for Flask."""
+long_description = """Web APIs for Flask."""
 
 
 def get_version(package):
@@ -79,7 +80,7 @@ setup(
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Environment :: Web Environment',
-        'Framework :: Django',
+        'Framework :: Flask',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: BSD License',
         'Operating System :: OS Independent',
