@@ -6,3 +6,4 @@ coverage ~= 3.7.1
 flake8 ~= 2.1
 mkdocs ~= 0.12
 tox ~= 2.0
+pytest >= 3.2

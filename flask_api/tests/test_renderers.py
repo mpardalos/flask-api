@@ -4,6 +4,7 @@ from flask_api import renderers, status, FlaskAPI
 from flask_api.decorators import set_renderers
 from flask_api.mediatypes import MediaType
 import unittest
+import pytest
 
 
 class RendererTests(unittest.TestCase):
@@ -11,13 +12,13 @@ class RendererTests(unittest.TestCase):
         renderer = renderers.JSONRenderer()
         content = renderer.render({'example': 'example'}, MediaType('application/json'))
         expected = '{"example": "example"}'
-        self.assertEqual(content, expected)
+        assert content == expected
 
     def test_render_json_with_indent(self):
         renderer = renderers.JSONRenderer()
         content = renderer.render({'example': 'example'}, MediaType('application/json; indent=4'))
         expected = '{\n    "example": "example"\n}'
-        self.assertEqual(content, expected)
+        assert content == expected
 
     def test_render_browsable_encoding(self):
         app = FlaskAPI(__name__)
@@ -30,9 +31,9 @@ class RendererTests(unittest.TestCase):
             response = client.get('/_love',
                                   headers={"Accept": "text/html"})
             html = str(response.get_data())
-            self.assertTrue('I &lt;3 Python' in html)
-            self.assertTrue('<h1>Love</h1>' in html)
-            self.assertTrue('/_love' in html)
+            assert 'I &lt;3 Python' in html
+            assert '<h1>Love</h1>' in html
+            assert '/_love' in html
 
     def test_render_browsable_linking(self):
         app = FlaskAPI(__name__)
@@ -46,18 +47,18 @@ class RendererTests(unittest.TestCase):
             response = client.get('/_happiness',
                                   headers={"Accept": "text/html"})
             html = str(response.get_data())
-            self.assertTrue('<a href="http://example.org">http://example.org</a>' in html)
-            self.assertTrue('&lt;br /&gt;'in html)
-            self.assertTrue('<h1>Happiness</h1>' in html)
-            self.assertTrue('/_happiness' in html)
+            assert '<a href="http://example.org">http://example.org</a>' in html
+            assert '&lt;br /&gt;'in html
+            assert '<h1>Happiness</h1>' in html
+            assert '/_happiness' in html
 
     def test_renderer_negotiation_not_implemented(self):
         renderer = renderers.BaseRenderer()
-        with self.assertRaises(NotImplementedError) as context:
+        with pytest.raises(NotImplementedError) as exception:
             renderer.render(None, None)
-        msg = str(context.exception)
+        msg = str(exception.value)
         expected = '`render()` method must be implemented for class "BaseRenderer"'
-        self.assertEqual(msg, expected)
+        assert msg == expected
 
 
 class OverrideParserSettings(unittest.TestCase):
@@ -97,25 +98,25 @@ class OverrideParserSettings(unittest.TestCase):
     def test_overridden_parsers_with_settings(self):
         with self.app.test_client() as client:
             response = client.get('/custom_renderer_1/')
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(response.headers['Content-Type'], 'application/example1')
+            assert response.status_code == status.HTTP_200_OK
+            assert response.headers['Content-Type'] == 'application/example1'
             data = response.get_data().decode('utf8')
-            self.assertEqual(data, "custom renderer 1")
+            assert data == "custom renderer 1"
 
     def test_overridden_parsers_with_decorator(self):
         with self.app.test_client() as client:
             data = {'example': 'example'}
             response = client.get('/custom_renderer_2/', data=data)
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(response.headers['Content-Type'], 'application/example2')
+            assert response.status_code == status.HTTP_200_OK
+            assert response.headers['Content-Type'] == 'application/example2'
             data = response.get_data().decode('utf8')
-            self.assertEqual(data, "custom renderer 2")
+            assert data == "custom renderer 2"
 
     def test_overridden_parsers_with_decorator_as_args(self):
         with self.app.test_client() as client:
             data = {'example': 'example'}
             response = client.get('/custom_renderer_2_as_args/', data=data)
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(response.headers['Content-Type'], 'application/example2')
+            assert response.status_code == status.HTTP_200_OK
+            assert response.headers['Content-Type'] == 'application/example2'
             data = response.get_data().decode('utf8')
-            self.assertEqual(data, "custom renderer 2")
+            assert data == "custom renderer 2"

@@ -97,54 +97,54 @@ class AppTests(unittest.TestCase):
     def test_set_status_and_headers(self):
         with app.test_client() as client:
             response = client.get('/set_status_and_headers/')
-            self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-            self.assertEqual(response.headers['Location'], 'http://example.com/456')
-            self.assertEqual(response.content_type, 'application/json')
+            assert response.status_code == status.HTTP_201_CREATED
+            assert response.headers['Location'] == 'http://example.com/456'
+            assert response.content_type == 'application/json'
             expected = '{"example": "content"}'
-            self.assertEqual(response.get_data().decode('utf8'), expected)
+            assert response.get_data().decode('utf8') == expected
 
     def test_set_headers(self):
         with app.test_client() as client:
             response = client.get('/set_headers/')
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(response.headers['Location'], 'http://example.com/456')
-            self.assertEqual(response.content_type, 'application/json')
+            assert response.status_code == status.HTTP_200_OK
+            assert response.headers['Location'] == 'http://example.com/456'
+            assert response.content_type == 'application/json'
             expected = '{"example": "content"}'
-            self.assertEqual(response.get_data().decode('utf8'), expected)
+            assert response.get_data().decode('utf8') == expected
 
     def test_make_response(self):
         with app.test_client() as client:
             response = client.get('/make_response_view/')
-            self.assertEqual(response.content_type, 'application/json')
-            self.assertEqual(response.headers['Location'], 'http://example.com/456')
-            self.assertEqual(response.content_type, 'application/json')
+            assert response.content_type == 'application/json'
+            assert response.headers['Location'] == 'http://example.com/456'
+            assert response.content_type == 'application/json'
             expected = '{"example": "content"}'
-            self.assertEqual(response.get_data().decode('utf8'), expected)
+            assert response.get_data().decode('utf8') == expected
 
     def test_api_exception(self):
         with app.test_client() as client:
             response = client.get('/api_exception/')
-            self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-            self.assertEqual(response.content_type, 'application/json')
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            assert response.content_type == 'application/json'
             expected = '{"message": "You do not have permission to perform this action."}'
-            self.assertEqual(response.get_data().decode('utf8'), expected)
+            assert response.get_data().decode('utf8') == expected
 
     def test_custom_exception(self):
         with app.test_client() as client:
             response = client.get('/custom_exception/')
-            self.assertEqual(response.status_code, status.HTTP_410_GONE)
-            self.assertEqual(response.content_type, 'application/json')
+            assert response.status_code == status.HTTP_410_GONE
+            assert response.content_type == 'application/json'
 
     def test_custom_exception_default_code(self):
         with app.test_client() as client:
             response = client.get('/custom_exception_no_code/')
-            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-            self.assertEqual(response.content_type, 'application/json')
+            assert response.status_code == status.HTTP_400_BAD_REQUEST
+            assert response.content_type == 'application/json'
 
     def test_abort_view(self):
         with app.test_client() as client:
             response = client.get('/abort_view/')
-            self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+            assert response.status_code == status.HTTP_403_FORBIDDEN
 
     def test_options_view(self):
         with app.test_client() as client:
@@ -159,11 +159,11 @@ class AppTests(unittest.TestCase):
             response = client.get('/accepted_media_type/', headers=headers)
             data = json.loads(response.get_data().decode('utf8'))
             expected = {'accepted_media_type': 'application/json; api-version="1.0"'}
-            self.assertEqual(data, expected)
+            assert data == expected
 
             # Request the default renderer, which is "api-version 2.0".
             headers = {'Accept': '*/*'}
             response = client.get('/accepted_media_type/', headers=headers)
             data = json.loads(response.get_data().decode('utf8'))
             expected = {'accepted_media_type': 'application/json; api-version="2.0"'}
-            self.assertEqual(data, expected)
+            assert data == expected

@@ -2,14 +2,15 @@
 from __future__ import unicode_literals
 from flask_api.settings import APISettings
 import unittest
+import pytest
 
 
 class SettingsTests(unittest.TestCase):
     def test_bad_import(self):
         settings = APISettings({'DEFAULT_PARSERS': 'foobarz.FailedImport'})
-        with self.assertRaises(ImportError) as context:
+        with pytest.raises(ImportError) as exception:
             settings.DEFAULT_PARSERS
-        msg = str(context.exception)
+        msg = str(exception.value)
         excepted_py2 = (
             "Could not import 'foobarz.FailedImport' for API setting "
             "'DEFAULT_PARSERS'. No module named foobarz."
@@ -18,4 +19,4 @@ class SettingsTests(unittest.TestCase):
             "Could not import 'foobarz.FailedImport' for API setting "
             "'DEFAULT_PARSERS'. No module named 'foobarz'."
         )
-        self.assertIn(msg, (excepted_py2, excepted_py3))
+        assert msg in (excepted_py2, excepted_py3)

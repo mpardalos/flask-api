@@ -5,6 +5,7 @@ from flask_api import exceptions
 import flask_api
 import io
 import unittest
+import pytest
 
 app = flask_api.FlaskAPI(__name__)
 
@@ -17,7 +18,7 @@ class MediaTypeParsingTests(unittest.TestCase):
             'content_type': 'application/json'
         }
         with app.test_request_context(**kwargs):
-            self.assertEqual(request.data, {"key": 1, "other": "two"})
+            assert request.data == {"key": 1, "other": "two"}
 
     def test_invalid_content_type_request(self):
         kwargs = {
@@ -26,7 +27,7 @@ class MediaTypeParsingTests(unittest.TestCase):
             'content_type': 'text/plain'
         }
         with app.test_request_context(**kwargs):
-            with self.assertRaises(exceptions.UnsupportedMediaType):
+            with pytest.raises(exceptions.UnsupportedMediaType):
                 request.data
 
     def test_no_content_request(self):
@@ -35,17 +36,17 @@ class MediaTypeParsingTests(unittest.TestCase):
         `.data`, `.form` or `.files` attributes.
         """
         with app.test_request_context(method='PUT'):
-            self.assertFalse(request.data)
+            assert not request.data
 
         with app.test_request_context(method='PUT'):
-            self.assertFalse(request.form)
+            assert not request.form
 
         with app.test_request_context(method='PUT'):
-            self.assertFalse(request.files)
+            assert not request.files
 
     def test_encode_request(self):
         """
         Ensure that `.full_path` is correctly decoded in python 3
         """
         with app.test_request_context(method='GET', path='/?a=b'):
-            self.assertEqual(request.full_path, '/?a=b')
+            assert request.full_path == '/?a=b'

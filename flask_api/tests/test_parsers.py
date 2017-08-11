@@ -6,6 +6,7 @@ from flask_api.decorators import set_parsers
 import io
 import json
 import unittest
+import pytest
 
 
 app = FlaskAPI(__name__)
@@ -28,86 +29,86 @@ class ParserTests(unittest.TestCase):
         parser = parsers.JSONParser()
         stream = io.BytesIO(b'{"key": 1, "other": "two"}')
         data = parser.parse(stream, 'application/json')
-        self.assertEqual(data, {"key": 1, "other": "two"})
+        assert data == {"key": 1, "other": "two"}
 
     def test_invalid_json(self):
         parser = parsers.JSONParser()
         stream = io.BytesIO(b'{key: 1, "other": "two"}')
-        with self.assertRaises(exceptions.ParseError) as context:
+        with pytest.raises(exceptions.ParseError) as exception:
             parser.parse(stream, mediatypes.MediaType('application/json'))
-        detail = str(context.exception)
+        detail = str(exception.value)
         expected_py2 = 'JSON parse error - Expecting property name: line 1 column 1 (char 1)'
         expected_py3 = 'JSON parse error - Expecting property name enclosed in double quotes: line 1 column 2 (char 1)'
-        self.assertIn(detail, (expected_py2, expected_py3))
+        assert detail in (expected_py2, expected_py3)
 
     def test_invalid_multipart(self):
         parser = parsers.MultiPartParser()
         stream = io.BytesIO(b'invalid')
         media_type = mediatypes.MediaType('multipart/form-data; boundary="foo"')
-        with self.assertRaises(exceptions.ParseError) as context:
+        with pytest.raises(exceptions.ParseError) as exception:
             parser.parse(stream, media_type, content_length=len('invalid'))
-        detail = str(context.exception)
+        detail = str(exception.value)
         expected = 'Multipart parse error - Expected boundary at start of multipart data'
-        self.assertEqual(detail, expected)
+        assert detail == expected
 
     def test_invalid_multipart_no_boundary(self):
         parser = parsers.MultiPartParser()
         stream = io.BytesIO(b'invalid')
-        with self.assertRaises(exceptions.ParseError) as context:
+        with pytest.raises(exceptions.ParseError) as exception:
             parser.parse(stream, mediatypes.MediaType('multipart/form-data'))
-        detail = str(context.exception)
+        detail = str(exception.value)
         expected = 'Multipart message missing boundary in Content-Type header'
-        self.assertEqual(detail, expected)
+        assert detail == expected
 
     def test_renderer_negotiation_not_implemented(self):
         parser = parsers.BaseParser()
-        with self.assertRaises(NotImplementedError) as context:
+        with pytest.raises(NotImplementedError) as exception:
             parser.parse(None, None)
-        msg = str(context.exception)
+        msg = str(exception.value)
         expected = '`parse()` method must be implemented for class "BaseParser"'
-        self.assertEqual(msg, expected)
+        assert msg == expected
 
     def test_accessing_json(self):
         with app.test_client() as client:
             data = json.dumps({'example': 'example'})
             response = client.post('/', data=data, content_type='application/json')
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(response.headers['Content-Type'], 'application/json')
+            assert response.status_code == status.HTTP_200_OK
+            assert response.headers['Content-Type'] == 'application/json'
             data = json.loads(response.get_data().decode('utf8'))
             expected = {
                 "data": {"example": "example"},
                 "form": {},
                 "files": {}
             }
-            self.assertEqual(data, expected)
+            assert data == expected
 
     def test_accessing_url_encoded(self):
         with app.test_client() as client:
             data = {'example': 'example'}
             response = client.post('/', data=data)
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(response.headers['Content-Type'], 'application/json')
+            assert response.status_code == status.HTTP_200_OK
+            assert response.headers['Content-Type'] == 'application/json'
             data = json.loads(response.get_data().decode('utf8'))
             expected = {
                 "data": {"example": "example"},
                 "form": {"example": "example"},
                 "files": {}
             }
-            self.assertEqual(data, expected)
+            assert data == expected
 
     def test_accessing_multipart(self):
         with app.test_client() as client:
             data = {'example': 'example', 'upload': (io.BytesIO(b'file contents'), 'name.txt')}
             response = client.post('/', data=data)
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(response.headers['Content-Type'], 'application/json')
+            assert response.status_code == status.HTTP_200_OK
+            assert response.headers['Content-Type'] == 'application/json'
             data = json.loads(response.get_data().decode('utf8'))
             expected = {
                 "data": {"example": "example"},
                 "form": {"example": "example"},
                 "files": {"upload": {"name": "name.txt", "contents": "file contents"}}
             }
-            self.assertEqual(data, expected)
+            assert data == expected
 
 
 class OverrideParserSettings(unittest.TestCase):
@@ -147,34 +148,34 @@ class OverrideParserSettings(unittest.TestCase):
         with self.app.test_client() as client:
             data = {'example': 'example'}
             response = client.post('/custom_parser_1/', data=data)
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(response.headers['Content-Type'], 'application/json')
+            assert response.status_code == status.HTTP_200_OK
+            assert response.headers['Content-Type'] == 'application/json'
             data = json.loads(response.get_data().decode('utf8'))
             expected = {
                 "data": "custom parser 1",
             }
-            self.assertEqual(data, expected)
+            assert data == expected
 
     def test_overridden_parsers_with_decorator(self):
         with self.app.test_client() as client:
             data = {'example': 'example'}
             response = client.post('/custom_parser_2/', data=data)
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(response.headers['Content-Type'], 'application/json')
+            assert response.status_code == status.HTTP_200_OK
+            assert response.headers['Content-Type'] == 'application/json'
             data = json.loads(response.get_data().decode('utf8'))
             expected = {
                 "data": "custom parser 2",
             }
-            self.assertEqual(data, expected)
+            assert data == expected
 
     def test_overridden_parsers_with_decorator_as_args(self):
         with self.app.test_client() as client:
             data = {'example': 'example'}
             response = client.post('/custom_parser_2_as_args/', data=data)
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(response.headers['Content-Type'], 'application/json')
+            assert response.status_code == status.HTTP_200_OK
+            assert response.headers['Content-Type'] == 'application/json'
             data = json.loads(response.get_data().decode('utf8'))
             expected = {
                 "data": "custom parser 2",
             }
-            self.assertEqual(data, expected)
+            assert data == expected

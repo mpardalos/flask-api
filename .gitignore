@@ -1,4 +1,4 @@
-.env/
+.virtualenv/
 env/
 dist/
 htmlcov/
