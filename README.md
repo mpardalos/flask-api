@@ -1,12 +1,8 @@
-**Status**: Flask API is not currently under active development. This will be reassessed once the [Django REST framework](https://github.com/tomchristie/django-rest-framework) Kickstarter project reaches completion.
+**Status**: Flask API is not currently under active development. This is my own personal fork of the project, which will probably heavily deviate from the source repo.
 
 # [Flask API](http://www.flaskapi.org)
 
 Browsable Web APIs for Flask - <http://www.flaskapi.org>
-
-[![Build Status][travis-image]][travis-link]
-[![Coverage Status][coveralls-image]][coveralls-link]
-[![PyPI Version][pypi-image]][pypi-link]
 
 ---
 
