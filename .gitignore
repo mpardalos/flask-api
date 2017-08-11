@@ -8,3 +8,4 @@ Flask_API.egg-info/
 *.pyc
 __pycache__
 .coverage
+.idea
